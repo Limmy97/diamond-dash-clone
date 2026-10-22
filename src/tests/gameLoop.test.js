@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// These tests pop giant clusters repeatedly; keep the line-bomb meter out of the way (see lineBomb.test.js).
+vi.mock('../engine/constants.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  LINE_BOMB_METER_MAX: Infinity,
+}));
+
 import {
   BOMB,
   BOMB_BONUS_POINTS,
@@ -283,30 +290,33 @@ describe('bomb', () => {
     return board;
   };
 
-  it('detonates on tap, clearing its 3x3 neighbourhood with bonus points and leaving the combo alone', () => {
+  it('detonates on tap, clearing its 5x5 neighbourhood with bonus points and adding to the combo', () => {
     const start = stateWith({ board: bombAt(4, 4), comboCount: 2, comboExpiry: 2000, score: 50 });
     const { nextState, clearedCells, eventType } = handleCellTap(start, 4, 4, 1000, alwaysRed);
     expect(eventType).toBe('bomb');
-    expect(sortCoords(clearedCells)).toEqual([
-      [3, 3], [3, 4], [3, 5],
-      [4, 3], [4, 4], [4, 5],
-      [5, 3], [5, 4], [5, 5],
-    ]);
-    expect(nextState.score).toBe(50 + 9 * POINTS_PER_GEM + BOMB_BONUS_POINTS);
-    expect(nextState.comboCount).toBe(2);
+    const expected = [];
+    for (let r = 2; r <= 6; r++) for (let c = 2; c <= 6; c++) expected.push([r, c]);
+    expect(sortCoords(clearedCells)).toEqual(expected);
+    expect(nextState.score).toBe(50 + 25 * POINTS_PER_GEM + BOMB_BONUS_POINTS);
+    expect(nextState.comboCount).toBe(3);
+    expect(nextState.comboExpiry).toBe(1000 + COMBO_WINDOW_MS);
     expect(nextState.board.flat().includes(null)).toBe(false);
     // Columns outside the blast are untouched; the board still has a move.
-    expect(nextState.board.map((row) => row.slice(6))).toEqual(start.board.map((row) => row.slice(6)));
+    expect(nextState.board.map((row) => row.slice(7))).toEqual(start.board.map((row) => row.slice(7)));
     expect(hasValidMoves(nextState.board)).toBe(true);
   });
 
   it('clips the blast at a corner and doubles points in Fire Mode', () => {
     const start = stateWith({ board: bombAt(0, 0), isFireMode: true, fireModeExpiry: 10_000 });
-    expect(getBlastCells(start.board, 0, 0)).toHaveLength(4);
+    expect(getBlastCells(start.board, 0, 0)).toHaveLength(9);
     const { nextState, clearedCells, eventType } = handleCellTap(start, 0, 0, 1000, alwaysRed);
     expect(eventType).toBe('bomb');
-    expect(sortCoords(clearedCells)).toEqual([[0, 0], [0, 1], [1, 0], [1, 1]]);
-    expect(nextState.score).toBe((4 * POINTS_PER_GEM + BOMB_BONUS_POINTS) * 2);
+    expect(sortCoords(clearedCells)).toEqual([
+      [0, 0], [0, 1], [0, 2],
+      [1, 0], [1, 1], [1, 2],
+      [2, 0], [2, 1], [2, 2],
+    ]);
+    expect(nextState.score).toBe((9 * POINTS_PER_GEM + BOMB_BONUS_POINTS) * 2);
   });
 });
 

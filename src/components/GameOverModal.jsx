@@ -1,11 +1,15 @@
+import DifficultyPicker from './DifficultyPicker.jsx';
+
 /**
  * @param {Object} props
  * @param {number} props.score
  * @param {number} props.best
  * @param {boolean} props.isNewBest
+ * @param {string} props.difficulty
+ * @param {(difficulty: string) => void} props.onDifficultyChange
  * @param {() => void} props.onPlayAgain
  */
-export default function GameOverModal({ score, best, isNewBest, onPlayAgain }) {
+export default function GameOverModal({ score, best, isNewBest, difficulty, onDifficultyChange, onPlayAgain }) {
   return (
     <div
       className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-slate-950/75 p-4 backdrop-blur-sm"
@@ -27,6 +31,7 @@ export default function GameOverModal({ score, best, isNewBest, onPlayAgain }) {
             Best {best.toLocaleString()}
           </span>
         )}
+        <DifficultyPicker value={difficulty} onChange={onDifficultyChange} />
         <button
           type="button"
           autoFocus

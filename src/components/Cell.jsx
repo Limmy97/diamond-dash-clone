@@ -1,5 +1,19 @@
 import { memo } from 'react';
+import { baseColor, isTimeGem, isWashGem } from '../engine/constants.js';
 import { Gem } from './Gems.jsx';
+
+const TILE_LABELS = { bomb: 'bomb', line_bomb: 'line bomb' };
+
+/** Faint tile background per gem colour, matching the gem sitting on it. */
+const TILE_TINTS = {
+  red: 'bg-rose-500/20',
+  blue: 'bg-sky-500/20',
+  green: 'bg-emerald-500/20',
+  purple: 'bg-violet-500/20',
+  yellow: 'bg-amber-400/20',
+  bomb: 'bg-zinc-400/20',
+  line_bomb: 'bg-cyan-400/20',
+};
 
 /**
  * One board cell. Memoised: only cells whose props change re-render.
@@ -21,11 +35,11 @@ function Cell({ color, row, col, dropKey, burstKey, shakeKey, isBlastTarget, onT
   return (
     <button
       type="button"
-      aria-label={`${color === 'bomb' ? 'bomb' : `${color} gem`}, row ${row + 1}, column ${col + 1}`}
+      aria-label={`${TILE_LABELS[color] ?? `${baseColor(color)} gem${isTimeGem(color) ? ' (+2 seconds)' : isWashGem(color) ? ' (color wash)' : ''}`}, row ${row + 1}, column ${col + 1}`}
       onPointerDown={() => onTap(row, col)}
       onPointerEnter={() => onHover(row, col)}
-      className={`group relative flex items-center justify-center rounded-md outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-white/70 ${
-        isBlastTarget ? 'bg-orange-400/35 ring-2 ring-orange-300/80' : 'bg-white/[0.04]'
+      className={`group relative flex items-center justify-center outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 ${
+        isBlastTarget ? 'bg-orange-400/35 ring-2 ring-inset ring-orange-300/80' : TILE_TINTS[baseColor(color)] ?? 'bg-white/[0.04]'
       }`}
     >
       {burstKey > 0 && (

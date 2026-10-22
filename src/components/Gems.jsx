@@ -1,3 +1,5 @@
+import { baseColor, isTimeGem, isWashGem } from '../engine/constants.js';
+
 /**
  * Original SVG gem artwork (clean-room; see docs/reverse_engineering.md).
  * Render <GemDefs /> once per page; every <Gem /> references its gradients by id.
@@ -11,6 +13,7 @@ const PALETTE = {
   purple: ['#dcb2ff', '#8a3cf0', '#3f1384'],
   yellow: ['#fff3a0', '#ffc21a', '#9a6200'],
   bomb: ['#9ca3af', '#27272a', '#09090b'],
+  line_bomb: ['#cffafe', '#06b6d4', '#164e63'],
 };
 
 const fill = (color) => `url(#gem-${color}-fill)`;
@@ -121,6 +124,20 @@ const SHAPES = {
       <ellipse cx="32" cy="44" rx="10" ry="6" transform="rotate(-35 32 44)" fill="#fff" opacity=".35" />
     </>
   ),
+  // Line bomb: cyan orb with a four-way arrow cross (clears its row and column)
+  line_bomb: (
+    <>
+      <circle cx="50" cy="50" r="40" fill={fill('line_bomb')} stroke={stroke('line_bomb')} strokeWidth="3" />
+      <path
+        d="M50 14 62 28H55V45H72V38L86 50 72 62V55H55V72H62L50 86 38 72H45V55H28V62L14 50 28 38V45H45V28H38Z"
+        fill="#fff"
+        stroke={stroke('line_bomb')}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <ellipse cx="32" cy="28" rx="10" ry="6" transform="rotate(-35 32 28)" fill="#fff" opacity=".55" />
+    </>
+  ),
 };
 
 /** Shared gradient definitions. Render once, anywhere in the document. */
@@ -142,7 +159,7 @@ export function GemDefs() {
 
 /**
  * @param {Object} props
- * @param {'red'|'blue'|'green'|'purple'|'yellow'|'bomb'} props.color
+ * @param {'red'|'blue'|'green'|'purple'|'yellow'|'bomb'|'line_bomb'} props.color A colour followed by '*' is a time gem, by '^' a wash gem.
  * @param {string} [props.className]
  */
 export function Gem({ color, className = '' }) {
@@ -153,7 +170,21 @@ export function Gem({ color, className = '' }) {
       aria-hidden="true"
       focusable="false"
     >
-      {SHAPES[color]}
+      {SHAPES[baseColor(color)]}
+      {isTimeGem(color) && (
+        // Clock badge: popping this gem adds seconds to the round timer.
+        <>
+          <circle cx="72" cy="72" r="22" fill="#fff" stroke="#0f172a" strokeWidth="4" />
+          <path d="M72 58V72L82 78" fill="none" stroke="#0f172a" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+      {isWashGem(color) && (
+        // Droplet badge: popping this gem recolours part of the board to this gem's colour.
+        <>
+          <circle cx="72" cy="72" r="22" fill="#fff" stroke="#0f172a" strokeWidth="4" />
+          <path d="M72 56C72 56 61 68 61 76A11 11 0 0 0 83 76C83 68 72 56 72 56Z" fill={PALETTE[baseColor(color)]?.[1]} stroke="#0f172a" strokeWidth="3" strokeLinejoin="round" />
+        </>
+      )}
     </svg>
   );
 }

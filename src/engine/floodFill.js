@@ -1,4 +1,4 @@
-import { BOMB, MIN_CLUSTER_SIZE } from './constants.js';
+import { baseColor, isSpecialTile, MIN_CLUSTER_SIZE } from './constants.js';
 
 /**
  * @typedef {(string|null)[][]} Board  board[row][col]; row 0 is the top.
@@ -29,12 +29,13 @@ export function isInBounds(board, row, col) {
  * @param {Board} board
  * @param {number} row
  * @param {number} col
- * @returns {Coord[]} Coordinates in BFS order, or [] if the cell is out of bounds, empty, or a bomb.
+ * @returns {Coord[]} Coordinates in BFS order, or [] if the cell is out of bounds, empty, or a special tile.
  */
 export function findConnected(board, row, col) {
   if (!isInBounds(board, row, col)) return [];
-  const color = board[row][col];
-  if (color == null || color === BOMB) return [];
+  const tile = board[row][col];
+  if (tile == null || isSpecialTile(tile)) return [];
+  const color = baseColor(tile);
 
   const visited = new Set([`${row},${col}`]);
   const queue = [[row, col]];
@@ -47,7 +48,7 @@ export function findConnected(board, row, col) {
       const nr = r + dr;
       const nc = c + dc;
       const key = `${nr},${nc}`;
-      if (!visited.has(key) && isInBounds(board, nr, nc) && board[nr][nc] === color) {
+      if (!visited.has(key) && isInBounds(board, nr, nc) && baseColor(board[nr][nc]) === color) {
         visited.add(key);
         queue.push([nr, nc]);
       }

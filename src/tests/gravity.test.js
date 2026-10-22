@@ -70,13 +70,19 @@ describe('refill: biased fill (Step A)', () => {
   });
 
   it('copies a filled neighbour when the bias roll succeeds', () => {
-    // Bias roll 0.1 < 0.45, then neighbour index pick 0 -> the green below.
+    // Bias roll 0.1 < 0.4, then neighbour index pick 0 -> the green below.
     const next = refill(parse(['.', 'G', 'G']), sequenceRng([0.1, 0]));
     expect(next).toEqual(parse(['G', 'G', 'G']));
   });
 
+  it('uses the supplied match bias, so harder modes copy neighbours less often', () => {
+    // A 0.35 roll copies the green below at the easy 0.4 bias but not at the hard 0.28 bias.
+    expect(refill(parse(['.', 'G', 'G']), sequenceRng([0.35, 0]), 0, [], 0.4)[0][0]).toBe('green');
+    expect(refill(parse(['.', 'G', 'G']), sequenceRng([0.35, 0]), 0, [], 0.28)[0][0]).toBe('red');
+  });
+
   it('picks uniformly when the bias roll fails', () => {
-    // Bias roll 0.5 >= 0.45, then uniform 0.3 -> blue.
+    // Bias roll 0.5 >= 0.4, then uniform 0.3 -> blue.
     const next = refill(parse(['.', 'R', 'R', 'R']), sequenceRng([0.5, 0.3]));
     expect(next[0][0]).toBe('blue');
   });

@@ -1,4 +1,4 @@
-# Diamond Dash Clone — Core Gameplay Specification
+# Gem Blitz — Core Gameplay Specification
 
 ## Purpose
 Define the headless gameplay rules for a 60-second tile-popping round: board layout, cluster detection, gravity and replenishment, combo and Fire Mode, and procedural audio feedback. The engine (`src/engine/`) implements these rules as pure, deterministic functions. The UI layer only renders the engine's state and forwards input.
@@ -98,25 +98,49 @@ Fire Mode SHALL activate when the combo counter reaches 5. It lasts 5 seconds. W
 - **WHEN** 5 seconds have passed since Fire Mode activated
 - **THEN** Fire Mode ends and normal cluster rules apply again
 
+### Requirement: Difficulty Modes
+The player picks Easy, Medium or Hard before each round (`DIFFICULTIES` in `src/engine/constants.js`). Easy needs 5 consecutive successful moves to ignite Fire Mode and uses `REFILL_MATCH_BIAS` (0.40); Medium needs 7 with a bias of 0.34; Hard needs 9 with a bias of 0.28. The fire meter, pop pitch ladder and best score are all per difficulty. Detonating a bomb or line bomb is a successful move: outside Fire Mode it adds one to the streak (and can ignite Fire Mode) instead of resetting it.
+
 ### Requirement: Bomb Gem
-Each gem replenished after a pop SHALL have a `BOMB_SPAWN_CHANCE` (3%) chance to be a bomb. A bomb is not a color: it never joins a cluster, and the refill bias never copies it. Tapping a bomb destroys the 3x3 area around it (clipped to the board) without needing a cluster. It awards `POINTS_PER_GEM` per destroyed cell plus `BOMB_BONUS_POINTS`, doubled in Fire Mode, and leaves the combo counter unchanged.
+Each gem replenished after a pop SHALL have a `BOMB_SPAWN_CHANCE` (1.2%) chance to be a bomb. A bomb is not a color: it never joins a cluster, and the refill bias never copies it. Tapping a bomb destroys the 5x5 area around it (`BOMB_RADIUS` = 2, clipped to the board) without needing a cluster. It awards `POINTS_PER_GEM` per destroyed cell plus `BOMB_BONUS_POINTS`, doubled in Fire Mode, and counts as a successful move for the combo streak.
 
 #### Scenario: Bomb detonation
 - **WHEN** the player taps a bomb at `[4,4]`
-- **THEN** the 9 cells in rows 3–5, columns 3–5 are destroyed and the board collapses and refills
+- **THEN** the 25 cells in rows 2–6, columns 2–6 are destroyed and the board collapses and refills
+
+A bomb, line bomb or Fire Mode blast that reaches another bomb or line bomb detonates it too (chain reactions resolve fully, each special once, each awarding its bonus).
+
+### Requirement: Line Bomb
+A separate meter fills by the size of every normal (non-Fire) pop and drains `LINE_BOMB_MISS_DRAIN` on a miss. When it reaches `LINE_BOMB_METER_MAX` a line bomb replaces the gem at the tapped position. Tapping it destroys its entire column plus the entire bottom row, scoring `POINTS_PER_GEM` per cell plus `LINE_BOMB_BONUS_POINTS`.
+
+### Requirement: Time Gem
+Replenished gems have a `TIME_GEM_SPAWN_CHANCE` chance to be a time gem: a coloured gem that still matches its base colour. Every time gem destroyed by any means adds `TIME_GEM_BONUS_SECONDS` (2) to the round clock. At most one time gem exists at a time, a new one spawns no sooner than 8–10 seconds after the previous, and an unpopped one loses its badge (becoming a plain gem) after `TIME_GEM_LIFETIME_MS` (4s).
+
+### Requirement: Wash Gem
+Like the time gem, a wash gem is a coloured gem that still matches its base colour. It spawns at most once per 10–12 seconds (`WASH_GEM_COOLDOWN_*`), at most one exists at a time, and an unpopped one loses its badge after `WASH_GEM_LIFETIME_MS` (4s). Destroying it by any means splashes its own colour over the refilled board like a paint bucket: the board is split into four quadrants, and a random quadrant other than the one the gem was in receives an organic blob of adjacent gems (20–25% of the board's gems, limited by the quadrant's size) painted in that colour.
+
+### Requirement: Boosters
+Each round grants `STARTING_BOOSTERS`: Shuffle (rearranges the board) and Color Burst (armed, then destroys every gem of the tapped colour). Boosters never touch special tiles and always leave a valid move.
+
+### Requirement: Round-End Finale
+When the clock reaches 0, taps are ignored and the game-over screen waits for a finale. First every leftover power-up on the board activates at once (a wash gem splashes, then every bomb, line bomb, time gem and wash gem is destroyed, bombs chaining), then every remaining cluster of 3+ is popped at once for base points. The game-over screen appears `GAME_OVER_DELAY_MS` (1.5s) after the final refill. Best score is recorded after the bonus points.
 
 ### Requirement: Scoring
 Each destroyed gem SHALL award `POINTS_PER_GEM` base points (defined in `src/engine/constants.js`), multiplied by `FIRE_MODE_SCORE_MULTIPLIER` while Fire Mode is active.
 
 ### Requirement: Procedural Audio Engine
-Sound effects SHALL be synthesized at runtime with the Web Audio API. No sampled audio from the original game is used. Each pop plays a short oscillator tone with an attack/decay gain envelope. Its pitch rises one step per combo level:
-- Normal pops use a 9-step ladder (combo levels above 9 stay at the top step).
-- Fire Mode pops use a separate, brighter 12-step ladder.
-- Step `n` plays at `baseFrequency * 2^(n / 12)` (semitone steps).
+Sound effects SHALL be synthesized at runtime with the Web Audio API. No sampled audio from the original game is used. Each pop plays a short oscillator tone with an attack/decay gain envelope. Its pitch follows the fire meter, one step per pip:
+- Step `n` (0-based, `comboCount - 1`) plays at `baseFrequency * 2^(2n / 12)`, two semitones per step, up to step 4 when the meter fills.
+- Fire Mode pops use a brighter timbre and always play the top step.
+- The pitch tracks the visible meter, so it drops when a miss or lapsed streak empties the meter.
 
 #### Scenario: Escalating pitch
 - **WHEN** the combo counter goes from 2 to 3
-- **THEN** the next pop plays one semitone higher than the previous one
+- **THEN** the next pop plays two semitones higher than the previous one
+
+#### Scenario: Fire Mode pitch
+- **WHEN** Fire Mode is active
+- **THEN** every pop plays the top pitch
 
 #### Scenario: Audio unavailable
 - **WHEN** the browser blocks or lacks an `AudioContext`

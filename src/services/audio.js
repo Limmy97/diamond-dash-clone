@@ -7,11 +7,11 @@
 /** Base pitch for combo step 0 (A4). */
 const POP_BASE_FREQUENCY = 440;
 
-/** Highest pitch step for normal pops (a 9-step ladder: steps 0-8). */
-const MAX_POP_STEP = 8;
+/** Total climb across the meter, so every difficulty spans the same pitch range. */
+const PITCH_SPAN_SEMITONES = 8;
 
-/** Highest pitch step for Fire Mode pops (a 12-step ladder: steps 0-11). */
-const MAX_FIRE_STEP = 11;
+/** Top pitch step for the default 5-pip meter. */
+const DEFAULT_TOP_STEP = 4;
 
 const MASTER_VOLUME = 0.3;
 
@@ -21,16 +21,17 @@ let ctx = null;
 let master = null;
 
 /**
- * Frequency for a combo step: f = f0 * 2^(step / 12), clamped to the ladder.
+ * Frequency for a meter step, spread evenly over PITCH_SPAN_SEMITONES from step 0
+ * to `topStep` (the pop that fills the meter). Fire Mode is always the top.
  *
- * @param {number} comboStep
+ * @param {number} comboStep 0-based step (comboCount - 1).
  * @param {boolean} [fireMode=false]
+ * @param {number} [topStep=DEFAULT_TOP_STEP] Fire trigger count minus one.
  * @returns {number}
  */
-export function getPopFrequency(comboStep, fireMode = false) {
-  const maxStep = fireMode ? MAX_FIRE_STEP : MAX_POP_STEP;
-  const step = Math.min(Math.max(0, Math.floor(comboStep) || 0), maxStep);
-  return POP_BASE_FREQUENCY * 2 ** (step / 12);
+export function getPopFrequency(comboStep, fireMode = false, topStep = DEFAULT_TOP_STEP) {
+  const step = fireMode ? topStep : Math.min(Math.max(0, Math.floor(comboStep) || 0), topStep);
+  return POP_BASE_FREQUENCY * 2 ** (((step / topStep) * PITCH_SPAN_SEMITONES) / 12);
 }
 
 /**
@@ -96,15 +97,16 @@ function playVoice({ type, from, to, duration, peak, delay = 0, output = master 
 }
 
 /**
- * Short upward chirp whose pitch climbs one semitone per combo step.
+ * Short upward chirp whose pitch follows the fire meter.
  *
  * @param {number} comboStep 0-based step (e.g. comboCount - 1).
  * @param {Object} [options]
- * @param {boolean} [options.fireMode=false] Use the brighter 12-step Fire Mode ladder.
+ * @param {boolean} [options.fireMode=false] Brighter timbre, always at the top pitch.
+ * @param {number} [options.topStep] Highest step on the current difficulty's meter.
  */
-export function playPop(comboStep, { fireMode = false } = {}) {
+export function playPop(comboStep, { fireMode = false, topStep } = {}) {
   if (!ctx) return;
-  const freq = getPopFrequency(comboStep, fireMode);
+  const freq = getPopFrequency(comboStep, fireMode, topStep);
   playVoice({
     type: fireMode ? 'square' : 'triangle',
     from: freq,

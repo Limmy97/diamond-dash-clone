@@ -1,4 +1,4 @@
-import { FIRE_MODE_DURATION_MS, FIRE_MODE_TRIGGER_COMBO } from '../engine/constants.js';
+import { FIRE_MODE_DURATION_MS } from '../engine/constants.js';
 
 /** @param {{ lit: boolean, burning: boolean }} props */
 function FlamePip({ lit, burning }) {
@@ -24,9 +24,10 @@ function FlamePip({ lit, burning }) {
  * @param {number} props.comboCount
  * @param {boolean} props.isFireMode
  * @param {number} props.fireTimeLeftMs
+ * @param {number} props.trigger Pops needed to ignite Magic Fire (one pip each).
  */
-export default function ComboMeter({ comboCount, isFireMode, fireTimeLeftMs }) {
-  const lit = isFireMode ? FIRE_MODE_TRIGGER_COMBO : Math.min(comboCount, FIRE_MODE_TRIGGER_COMBO);
+export default function ComboMeter({ comboCount, isFireMode, fireTimeLeftMs, trigger }) {
+  const lit = isFireMode ? trigger : Math.min(comboCount, trigger);
   const fireFraction = isFireMode ? Math.max(0, Math.min(1, fireTimeLeftMs / FIRE_MODE_DURATION_MS)) : 0;
 
   return (
@@ -36,7 +37,7 @@ export default function ComboMeter({ comboCount, isFireMode, fireTimeLeftMs }) {
       }`}
       role="status"
       aria-live="polite"
-      aria-label={isFireMode ? 'Magic Fire active' : `Combo ${comboCount} of ${FIRE_MODE_TRIGGER_COMBO}`}
+      aria-label={isFireMode ? 'Magic Fire active' : `Combo ${comboCount} of ${trigger}`}
     >
       {isFireMode && (
         <div
@@ -52,7 +53,7 @@ export default function ComboMeter({ comboCount, isFireMode, fireTimeLeftMs }) {
         {isFireMode ? 'Magic Fire!' : `Combo ×${comboCount}`}
       </span>
       <div className="relative flex gap-1">
-        {Array.from({ length: FIRE_MODE_TRIGGER_COMBO }, (_, i) => (
+        {Array.from({ length: trigger }, (_, i) => (
           <FlamePip key={i} lit={i < lit} burning={isFireMode} />
         ))}
       </div>

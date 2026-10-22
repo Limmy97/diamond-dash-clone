@@ -37,7 +37,7 @@ function Grid({ board, isFireMode, lastTap, hoveredBlastCells, onCellTap, onHove
 
   return (
     <div
-      className={`grid aspect-[10/9] w-full touch-manipulation select-none gap-[2px] rounded-2xl p-1.5 ring-2 transition-[box-shadow,background-color] duration-300 sm:gap-1 sm:p-2 ${
+      className={`grid aspect-[10/9] w-full touch-manipulation select-none overflow-hidden rounded-2xl ring-2 transition-[box-shadow,background-color] duration-300 ${
         isFireMode
           ? 'bg-orange-950/60 shadow-[0_0_32px_rgba(251,146,60,0.55)] ring-orange-400'
           : 'bg-slate-900/70 shadow-xl shadow-black/40 ring-white/10'

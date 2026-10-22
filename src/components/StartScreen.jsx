@@ -1,8 +1,9 @@
 import { Gem } from './Gems.jsx';
-import { COLORS, FIRE_MODE_TRIGGER_COMBO, MIN_CLUSTER_SIZE, ROUND_DURATION_MS } from '../engine/constants.js';
+import { COLORS, DIFFICULTIES, MIN_CLUSTER_SIZE, ROUND_DURATION_MS } from '../engine/constants.js';
+import DifficultyPicker from './DifficultyPicker.jsx';
 
-/** @param {{ onStart: () => void }} props */
-export default function StartScreen({ onStart }) {
+/** @param {{ onStart: () => void, difficulty: string, onDifficultyChange: (difficulty: string) => void }} props */
+export default function StartScreen({ onStart, difficulty, onDifficultyChange }) {
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-slate-950/80 p-4 backdrop-blur-sm">
       <div className="flex max-w-xs flex-col items-center gap-4 text-center">
@@ -12,12 +13,13 @@ export default function StartScreen({ onStart }) {
           ))}
         </div>
         <h2 className="bg-gradient-to-b from-white to-sky-300 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
-          Diamond Dash
+          Gem Blitz
         </h2>
         <p className="text-sm text-white/70">
-          Tap groups of {MIN_CLUSTER_SIZE}+ matching gems. Chain {FIRE_MODE_TRIGGER_COMBO} quick pops to ignite
+          Tap groups of {MIN_CLUSTER_SIZE}+ matching gems. Chain {DIFFICULTIES[difficulty].fireTrigger} quick pops to ignite
           Magic Fire. You have {ROUND_DURATION_MS / 1000} seconds.
         </p>
+        <DifficultyPicker value={difficulty} onChange={onDifficultyChange} />
         <button
           type="button"
           autoFocus

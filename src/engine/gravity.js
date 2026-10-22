@@ -1,4 +1,4 @@
-import { BOMB, COLORS, REFILL_MATCH_BIAS } from './constants.js';
+import { baseColor, BOMB, COLORS, isSpecialTile, REFILL_MATCH_BIAS } from './constants.js';
 import { hasValidMoves, isInBounds } from './floodFill.js';
 
 /**
@@ -63,25 +63,26 @@ const ORTHOGONAL = [
 ];
 
 /**
- * Colour for a new gem at [r, c]: with REFILL_MATCH_BIAS probability copy an
+ * Colour for a new gem at [r, c]: with `matchBias` probability copy an
  * already-filled neighbour (below, left or right), otherwise pick uniformly.
  *
  * @param {Board} board
  * @param {number} r
  * @param {number} c
  * @param {Rng} rng
+ * @param {number} matchBias
  * @returns {string}
  */
-function biasedColor(board, r, c, rng) {
+function biasedColor(board, r, c, rng, matchBias) {
   const neighbours = [
     [r + 1, c],
     [r, c - 1],
     [r, c + 1],
   ]
-    .filter(([nr, nc]) => isInBounds(board, nr, nc) && board[nr][nc] != null && board[nr][nc] !== BOMB)
-    .map(([nr, nc]) => board[nr][nc]);
+    .filter(([nr, nc]) => isInBounds(board, nr, nc) && board[nr][nc] != null && !isSpecialTile(board[nr][nc]))
+    .map(([nr, nc]) => baseColor(board[nr][nc]));
 
-  if (neighbours.length > 0 && rng() < REFILL_MATCH_BIAS) {
+  if (neighbours.length > 0 && rng() < matchBias) {
     return neighbours[Math.floor(rng() * neighbours.length)];
   }
   return randomColor(rng);
@@ -139,17 +140,30 @@ function forceMove(board, filled, rng) {
  * @param {Board} board
  * @param {Rng} [rng=Math.random] Inject a seeded generator for deterministic results.
  * @param {number} [bombChance=0] Per-cell bomb probability. At 0 no extra rng values are drawn.
+ * @param {[string, number][]} [gemMarkers=[]] [suffix, chance] pairs for time/wash gems. Each marker spawns at most
+ *        once per refill, never two on one gem; with none, no extra rng values are drawn.
+ * @param {number} [matchBias=REFILL_MATCH_BIAS] Chance a new gem copies a neighbour's colour.
  * @returns {Board}
  */
-export function refill(board, rng = Math.random, bombChance = 0) {
+export function refill(board, rng = Math.random, bombChance = 0, gemMarkers = [], matchBias = REFILL_MATCH_BIAS) {
   const next = board.map((row) => row.slice());
   const filled = new Set();
+  const markers = gemMarkers.filter(([, chance]) => chance > 0);
 
   for (let r = next.length - 1; r >= 0; r--) {
     for (let c = 0; c < next[r].length; c++) {
       if (next[r][c] == null) {
         // Bombs roll at the top of the range so rngs biased toward 0 never spawn them.
-        next[r][c] = bombChance > 0 && rng() >= 1 - bombChance ? BOMB : biasedColor(next, r, c, rng);
+        if (bombChance > 0 && rng() >= 1 - bombChance) {
+          next[r][c] = BOMB;
+        } else {
+          // Markers roll at the top of the range too, so rngs biased toward 0 never spawn them.
+          let marker = '';
+          for (let i = 0; i < markers.length && marker === ''; i++) {
+            if (rng() >= 1 - markers[i][1]) [[marker]] = markers.splice(i, 1);
+          }
+          next[r][c] = biasedColor(next, r, c, rng, matchBias) + marker;
+        }
         filled.add(`${r},${c}`);
       }
     }
@@ -166,8 +180,17 @@ export function refill(board, rng = Math.random, bombChance = 0) {
  * @param {Coord[]} cells
  * @param {Rng} [rng=Math.random]
  * @param {number} [bombChance=0]
+ * @param {[string, number][]} [gemMarkers=[]]
+ * @param {number} [matchBias=REFILL_MATCH_BIAS]
  * @returns {Board}
  */
-export function applyGravity(board, cells, rng = Math.random, bombChance = 0) {
-  return refill(collapseColumns(clearCells(board, cells)), rng, bombChance);
+export function applyGravity(
+  board,
+  cells,
+  rng = Math.random,
+  bombChance = 0,
+  gemMarkers = [],
+  matchBias = REFILL_MATCH_BIAS,
+) {
+  return refill(collapseColumns(clearCells(board, cells)), rng, bombChance, gemMarkers, matchBias);
 }

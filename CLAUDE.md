@@ -1,4 +1,4 @@
-# Diamond Dash Web Clone (React + Vite)
+# Gem Blitz (React + Vite)
 
 ## Tech Stack & Tooling
 - Framework: React 18+ (Plain JavaScript / JSX)
@@ -36,7 +36,8 @@
 - Miss Penalty: Clicking a cluster of < 3 resets the combo counter to 0.
 - Round Duration: 60 seconds.
 - Magic Fire / Fever Mode:
-  - Fills after 5 consecutive successful pops within 1.2 seconds of each other.
+  - Fills after consecutive successful moves (pops or bomb/line-bomb detonations) within 1.2 seconds of each other: 5 on Easy, 7 on Medium, 9 on Hard.
+  - Medium and Hard also replenish with a lower same-colour neighbour bias (see `DIFFICULTIES` in `constants.js`).
   - Active for 5 seconds.
   - In Fever Mode, the player must still tap a valid cluster (>= 3). Every gem in that cluster detonates its own 3x3 area; the deduplicated union of those areas is destroyed and scores 2x points. A cluster of < 3 is a miss.
 
